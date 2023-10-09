@@ -10,7 +10,7 @@ library(embed)
 amazontrain <- vroom("./train.csv")
 amazontest <- vroom("./test.csv")
 amazontrain <- amazontrain %>%
-  mutate(RESOURCE=as.factor(RESOURCE), ACTION = as.factor(ACTION))
+  mutate(ACTION = as.factor(ACTION))
 #########################################
 #Visualize Data
 #########################################
@@ -39,3 +39,26 @@ prep <- prep(my_recipe)
 baked <- bake(prep, new_data = amazontrain)
 
 
+###########################################################
+#Logistic Regression
+###########################################################
+library(tidymodels)
+my_mod <- logistic_reg() %>% #Type of model
+  set_engine("glm")
+amazon_workflow <- workflow() %>%
+  add_recipe(my_recipe) %>%
+  add_model(my_mod) %>%
+  fit(data = amazontrain) # Fit the workflow
+
+amazon_predictions <- predict(amazon_workflow,
+                        new_data=amazontest,
+                        type="prob") # "class" or "prob" (see doc)
+
+submission <- amazon_predictions %>%
+  mutate(id = amazontest$id) %>%
+  mutate(Action = .pred_1) %>%
+  select(3, 4)
+
+vroom_write(submission, "amazonlog.csv", delim = ",")
+
+hist(submission$Action)
