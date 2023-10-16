@@ -70,5 +70,154 @@ The following objects are masked from ‘package:readr’:
     problems, spec
 
 > library(embed)
-Error in library(embed) : there is no package called ‘embed’
-Execution halted
+> 
+> amazontrain <- vroom("./train.csv")
+Rows: 32769 Columns: 10
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+dbl (10): ACTION, RESOURCE, MGR_ID, ROLE_ROLLUP_1, ROLE_ROLLUP_2, ROLE_DEPTN...
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+> amazontest <- vroom("./test.csv")
+Rows: 58921 Columns: 10
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+dbl (10): id, RESOURCE, MGR_ID, ROLE_ROLLUP_1, ROLE_ROLLUP_2, ROLE_DEPTNAME,...
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+> amazontrain <- amazontrain %>%
++   mutate(ACTION = as.factor(ACTION))
+> #########################################
+> #Visualize Data
+> #########################################
+> amazontrain
+# A tibble: 32,769 × 10
+   ACTION RESOURCE MGR_ID ROLE_ROLLUP_1 ROLE_ROLLUP_2 ROLE_DEPTNAME ROLE_TITLE
+   <fct>     <dbl>  <dbl>         <dbl>         <dbl>         <dbl>      <dbl>
+ 1 1         39353  85475        117961        118300        123472     117905
+ 2 1         17183   1540        117961        118343        123125     118536
+ 3 1         36724  14457        118219        118220        117884     117879
+ 4 1         36135   5396        117961        118343        119993     118321
+ 5 1         42680   5905        117929        117930        119569     119323
+ 6 0         45333  14561        117951        117952        118008     118568
+ 7 1         25993  17227        117961        118343        123476     118980
+ 8 1         19666   4209        117961        117969        118910     126820
+ 9 1         31246    783        117961        118413        120584     128230
+10 1         78766  56683        118079        118080        117878     117879
+# ℹ 32,759 more rows
+# ℹ 3 more variables: ROLE_FAMILY_DESC <dbl>, ROLE_FAMILY <dbl>,
+#   ROLE_CODE <dbl>
+> library(ggmosaic)
+> ggplot(data =amazontrain) + geom_mosaic(aes(x=product(RESOURCE), fill=ACTION))
+Warning message:
+`unite_()` was deprecated in tidyr 1.2.0.
+ℹ Please use `unite()` instead.
+ℹ The deprecated feature was likely used in the ggmosaic package.
+  Please report the issue at <https://github.com/haleyjeppson/ggmosaic>. 
+> 
+> ggplot(data= amazontrain) + geom_boxplot(aes(x = , y=RESOURCE))
+> 
+> ggplot(data= amazontrain) + geom_boxplot(aes(x = , y=ROLE_TITLE))
+> 
+> amazontrain %>%
++   summarise(n = n_distinct(ROLE_CODE))
+# A tibble: 1 × 1
+      n
+  <int>
+1   343
+> 
+> #Should have 112 columns
+> library(tidymodels)
+> library(embed)
+> 
+> my_recipe <- recipe(ACTION ~ ., data=amazontrain) %>%
++   step_mutate_at(all_numeric_predictors(), fn = factor) %>%
++   step_other(all_nominal_predictors(), threshold = .01) %>%
++   #step_dummy(all_nominal_predictors()) %>%
++   step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION))
+> 
+> prep <- prep(my_recipe)
+boundary (singular) fit: see help('isSingular')
+> baked <- bake(prep, new_data = amazontrain)
+> 
+> 
+> ###########################################################
+> #Logistic Regression
+> ###########################################################
+> library(tidymodels)
+> my_mod <- logistic_reg() %>% #Type of model
++   set_engine("glm")
+> amazon_workflow <- workflow() %>%
++   add_recipe(my_recipe) %>%
++   add_model(my_mod) %>%
++   fit(data = amazontrain) # Fit the workflow
+boundary (singular) fit: see help('isSingular')
+> 
+>  amazon_predictions <- predict(amazon_workflow,
++                         new_data=amazontest,
++                         type="prob") # "class" or "prob" (see doc)
+Warning message:
+In predict.lm(object, newdata, se.fit, scale = 1, type = if (type ==  :
+  prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+> 
+> submission <- amazon_predictions %>%
++   mutate(id = amazontest$id) %>%
++   mutate(Action = .pred_1) %>%
++   select(3, 4)
+> 
+> vroom_write(submission, "amazonlog.csv", delim = ",")
+> 
+> hist(submission$Action)
+> 
+> #############################################################
+> #Penalized Logistic Regression
+> #############################################################
+> my_mod_PLR <- logistic_reg(mixture=tune(), penalty=tune()) %>% #Type of model
++   set_engine("glmnet")
+> 
+> amazon_workflow_PLR <- workflow() %>%
++ add_recipe(my_recipe) %>%
++ add_model(my_mod_PLR)
+> 
+> ## Grid of values to tune over
+> tuning_grid <- grid_regular(penalty(),
++                             mixture(),
++                             levels = 5) ## L^2 total tuning possibilities
+> 
+> ## Split data for CV15
+> folds <- vfold_cv(amazontrain, v = 5, repeats=1)
+> 
+> ## Run the CV
+> CV_results <- amazon_workflow_PLR %>%
++ tune_grid(resamples=folds,
++           grid=tuning_grid,
++           metrics=metric_set(roc_auc)) #Or leave metrics NULL
+boundary (singular) fit: see help('isSingular')
+boundary (singular) fit: see help('isSingular')
+boundary (singular) fit: see help('isSingular')
+boundary (singular) fit: see help('isSingular')
+boundary (singular) fit: see help('isSingular')
+> 
+>  #Find the best tuning parameters
+> bestTune <- CV_results %>%
++   select_best('roc_auc') 
+> 
+> final_wf <- amazon_workflow_PLR %>%
++   finalize_workflow(bestTune) %>%
++   fit(data=amazontrain)
+boundary (singular) fit: see help('isSingular')
+> 
+> amazon_predictions_PLR <- final_wf %>% predict(new_data = amazontest, type="prob")
+> 
+> submission <- amazon_predictions_PLR %>%
++   mutate(id = amazontest$id) %>%
++   mutate(Action = .pred_1) %>%
++   select(3, 4)
+> 
+> vroom_write(submission, "amazonlogpr.csv", delim = ",")
+> 
+> proc.time()
+   user  system elapsed 
+324.842   1.960 190.990 
