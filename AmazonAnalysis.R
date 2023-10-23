@@ -151,6 +151,7 @@ vroom_write(submission, "amazonrf.csv", delim = ",")
 #Naive Bayes
 ####################################################
 library(tidymodels)
+library(discrim)
 library(naivebayes)
 ## nb model3
 nb_model <- naive_Bayes(Laplace=tune(), smoothness=tune()) %>%
@@ -213,6 +214,119 @@ set_engine("kknn")
 knn_wf <- workflow() %>%
 add_recipe(my_recipe_K) %>%
 add_model(knn_model)
+
+## Fit or Tune Model HERE
+
+## Grid of values to tune over
+tuning_grid <- grid_regular(neighbors(),
+                            levels = 5) ## L^2 total tuning possibilities
+
+## Split data for CV15
+folds <- vfold_cv(amazontrain, v = 5, repeats=1)
+
+## Run the CV
+CV_results <- knn_wf %>%
+  tune_grid(resamples=folds,
+            grid=tuning_grid,
+            metrics=metric_set(roc_auc)) #Or leave metrics NULL
+
+#Find the best tuning parameters
+bestTune <- CV_results %>%
+  select_best('roc_auc') 
+
+
+final_wf <- knn_wf %>%
+  finalize_workflow(bestTune) %>%
+  fit(data=amazontrain)
+
+
+## Predict
+KNNpredictions <- predict(final_wf, new_data=amazontest, type="prob")
+
+submission <- KNNpredictions %>%
+  mutate(id = amazontest$id) %>%
+  mutate(Action = .pred_1) %>%
+  select(3, 4)
+
+vroom_write(submission, "amazonKNN.csv", delim = ",")
+
+#############################################################
+#Principal Component Dimension Reduction
+#############################################################
+library(tidymodels)
+
+
+library(tidymodels)
+library(embed)
+
+my_recipe_PCR <- recipe(ACTION ~ ., data=amazontrain) %>%
+  step_mutate_at(all_numeric_predictors(), fn = factor) %>%
+  step_other(all_nominal_predictors(), threshold = .001) %>%
+  step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_pca(all_predictors(), threshold = .9)
+
+prep <- prep(my_recipe_PCR)
+baked <- bake(prep, new_data = amazontrain)
+
+
+##Naive Bayes w/ PCR
+
+library(tidymodels)
+library(discrim)
+library(naivebayes)
+## nb model3
+nb_model <- naive_Bayes(Laplace=tune(), smoothness=tune()) %>%
+  set_mode("classification") %>%
+  set_engine("naivebayes") # install discrim library for the naivebayes engine
+nb_wf <- workflow() %>%
+  add_recipe(my_recipe_PCR) %>%
+  add_model(nb_model)
+
+## Tune smoothness and Laplace here
+
+## Grid of values to tune over
+tuning_grid <- grid_regular(smoothness(),
+                            Laplace(),
+                            levels = 5) ## L^2 total tuning possibilities
+
+## Split data for CV15
+folds <- vfold_cv(amazontrain, v = 5, repeats=1)
+
+## Run the CV
+CV_results <- nb_wf %>%
+  tune_grid(resamples=folds,
+            grid=tuning_grid,
+            metrics=metric_set(roc_auc)) #Or leave metrics NULL
+
+#Find the best tuning parameters
+bestTune <- CV_results %>%
+  select_best('roc_auc')
+
+final_wf <- nb_wf %>%
+  finalize_workflow(bestTune) %>%
+  fit(data=amazontrain)
+
+
+## Predict
+nbpredictions <- predict(final_wf, new_data=amazontest, type="prob")
+
+submission <- nbpredictions %>%
+  mutate(id = amazontest$id) %>%
+  mutate(Action = .pred_1) %>%
+  select(3, 4)
+
+vroom_write(submission, "amazonnb.csv", delim = ",")
+
+
+## knn w/ PCR
+knn_model <- nearest_neighbor(neighbors=tune()) %>% # set or tune
+  set_mode("classification") %>%
+  set_engine("kknn")
+
+knn_wf <- workflow() %>%
+  add_recipe(my_recipe_PCR) %>%
+  add_model(knn_model)
 
 ## Fit or Tune Model HERE
 
