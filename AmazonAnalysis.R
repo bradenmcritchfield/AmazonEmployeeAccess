@@ -363,3 +363,58 @@ submission <- KNNpredictions %>%
 
 vroom_write(submission, "amazonKNN.csv", delim = ",")
 
+########################################################################
+#Support Vector Machines
+########################################################################
+library(tidymodels)
+
+my_recipe_PCR <- recipe(ACTION ~ ., data=amazontrain) %>%
+  step_mutate_at(all_numeric_predictors(), fn = factor) %>%
+  step_other(all_nominal_predictors(), threshold = .001) %>%
+  step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_pca(all_predictors(), threshold = .9)
+
+svmRadial <- svm_rbf(rbf_sigma = tune(), cost = tune())%>%
+  set_mode("classification") %>%
+  set_engine()
+
+svm_wf <- workflow() %>%
+  add_recipe(my_recipe_PCR) %>%
+  add_model(svmRadial)
+
+## Tune smoothness and Laplace here
+
+## Grid of values to tune over
+tuning_grid <- grid_regular(rbf_sigma(),
+                            cost(),
+                            levels = 5) ## L^2 total tuning possibilities
+
+## Split data for CV15
+folds <- vfold_cv(amazontrain, v = 5, repeats=1)
+
+## Run the CV
+CV_results <- svm_wf %>%
+  tune_grid(resamples=folds,
+            grid=tuning_grid,
+            metrics=metric_set(roc_auc)) #Or leave metrics NULL
+
+#Find the best tuning parameters
+bestTune <- CV_results %>%
+  select_best('roc_auc')
+
+final_wf <- svm_wf %>%
+  finalize_workflow(bestTune) %>%
+  fit(data=amazontrain)
+
+
+## Predict
+svmpredictions <- predict(final_wf, new_data=amazontest, type="prob")
+
+submission <- svmpredictions %>%
+  mutate(id = amazontest$id) %>%
+  mutate(Action = .pred_1) %>%
+  select(3, 4)
+
+vroom_write(submission, "amazonsvm.csv", delim = ",")
+
