@@ -418,3 +418,18 @@ submission <- svmpredictions %>%
 
 vroom_write(submission, "amazonsvm.csv", delim = ",")
 
+##############################################################
+#Imbalanced Data
+##############################################################
+library(tidyverse)
+library(themis) # for smote
+my_recipe_Bal <- recipe(ACTION ~ ., data=amazontrain) %>%
+  step_mutate_at(all_numeric_predictors(), fn = factor) %>%
+  step_other(all_nominal_predictors(), threshold = .001) %>%
+  step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  step_pca(all_predictors(), threshold = .9) %>%
+  step_smote(all_outcomes(), neighbors=20)
+
+prep <- prep(my_recipe_Bal)
+baked <- bake(prep, new_data = amazontrain)
