@@ -113,7 +113,7 @@ my_mod_RF <- rand_forest(mtry = tune(), min_n = tune(), trees = 500) %>%
   set_mode("classification")
 
 amazon_workflow_RF <- workflow() %>%
-  add_recipe(my_recipe) %>%
+  add_recipe(my_recipe_Bal) %>%
   add_model(my_mod_RF)
 
 ## Grid of values to tune over
@@ -428,7 +428,7 @@ my_recipe_Bal <- recipe(ACTION ~ ., data=amazontrain) %>%
   step_other(all_nominal_predictors(), threshold = .001) %>%
   step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>%
   step_normalize(all_numeric_predictors()) %>%
-  step_pca(all_predictors(), threshold = .9) %>%
+  #step_pca(all_predictors(), threshold = .9) %>%
   step_smote(all_outcomes(), neighbors=20)
 
 prep <- prep(my_recipe_Bal)
