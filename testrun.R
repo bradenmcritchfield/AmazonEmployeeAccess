@@ -103,10 +103,10 @@ amazon_workflow_RF <- workflow() %>%
 ## Grid of values to tune over
 tuning_grid <- grid_regular(mtry(range = c(1,(ncol(amazontrain)-1))),
                             min_n(),
-                            levels = 5) ## L^2 total tuning possibilities
+                            levels = 3) ## L^2 total tuning possibilities
 
 ## Split data for CV15
-folds <- vfold_cv(amazontrain, v = 5, repeats=1)
+folds <- vfold_cv(amazontrain, v = 2, repeats=1)
 
 ## Run the CV
 CV_results <- amazon_workflow_RF %>%
