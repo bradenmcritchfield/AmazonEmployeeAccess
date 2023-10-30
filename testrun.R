@@ -239,6 +239,7 @@ svm_wf <- workflow() %>%
 ## Tune smoothness and Laplace here
 
 ## Grid of values to tune over
+library(kernlab)
 tuning_grid <- grid_regular(rbf_sigma(),
                             cost(),
                             levels = 5) ## L^2 total tuning possibilities
