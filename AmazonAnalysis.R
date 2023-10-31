@@ -425,7 +425,7 @@ library(tidyverse)
 library(themis) # for smote
 my_recipe_Bal <- recipe(ACTION ~ ., data=amazontrain) %>%
   step_mutate_at(all_numeric_predictors(), fn = factor) %>%
-  step_other(all_nominal_predictors(), threshold = .001) %>%
+  #step_other(all_nominal_predictors(), threshold = .001) %>%
   step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>%
   step_normalize(all_numeric_predictors()) %>%
   #step_pca(all_predictors(), threshold = .9) %>%
@@ -433,3 +433,72 @@ my_recipe_Bal <- recipe(ACTION ~ ., data=amazontrain) %>%
 
 prep <- prep(my_recipe_Bal)
 baked <- bake(prep, new_data = amazontrain)
+
+##############################################################
+#BART
+##############################################################
+my_BART_mod <- bart(mode ="classification",
+                    engine = "dbarts", trees=500)
+
+BART_wf <- workflow() %>%
+  add_recipe(my_recipe_Bal) %>%
+  add_model(my_BART_mod) %>%
+  fit(data=amazontrain)
+amazon_predictions_bart <- predict(BART_wf, new_data=amazontest, type="prob")
+
+submission <- amazon_predictions_bart %>%
+  mutate(id = amazontest$id) %>%
+  mutate(Action = .pred_1) %>%
+  select(3, 4)
+
+vroom_write(submission, "submissionBART.csv", delim = ",")  
+
+#########################################################
+#Categorical Random Forest
+###########################################################
+my_recipe_new <- recipe(ACTION ~ ., data=amazontrain) %>%
+  step_mutate_at(all_numeric_predictors(), fn = factor) %>%
+  #step_other(all_nominal_predictors(), threshold = .001) %>%
+  step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  #step_pca(all_predictors(), threshold = .8) %>%
+  step_smote(all_outcomes(), neighbors=5)
+
+my_mod_RF <- rand_forest(mtry = tune(), min_n = tune(), trees = 500) %>%
+  set_engine("ranger") %>%
+  set_mode("classification")
+
+amazon_workflow_RF <- workflow() %>%
+  add_recipe(my_recipe_new) %>%
+  add_model(my_mod_RF)
+
+## Grid of values to tune over
+tuning_grid <- grid_regular(mtry(range = c(1,(ncol(amazontrain)-1))),
+                            min_n(),
+                            levels = 5) ## L^2 total tuning possibilities
+
+## Split data for CV15
+folds <- vfold_cv(amazontrain, v = 5, repeats=1)
+
+## Run the CV
+CV_results <- amazon_workflow_RF %>%
+  tune_grid(resamples=folds,
+            grid=tuning_grid,
+            metrics=metric_set(roc_auc)) #Or leave metrics NULL
+
+#Find the best tuning parameters
+bestTune <- CV_results %>%
+  select_best('roc_auc')
+
+final_wf <- amazon_workflow_RF %>%
+  finalize_workflow(bestTune) %>%
+  fit(data=amazontrain)
+
+amazon_predictions_RF <- final_wf %>% predict(new_data = amazontest, type="prob")
+
+submission <- amazon_predictions_RF %>%
+  mutate(id = amazontest$id) %>%
+  mutate(Action = .pred_1) %>%
+  select(3, 4)
+
+vroom_write(submission, "amazonrf.csv", delim = ",")
