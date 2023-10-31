@@ -47,7 +47,7 @@ Type 'q()' to quit R.
 ✖ dplyr::lag()      masks stats::lag()
 ✖ yardstick::spec() masks readr::spec()
 ✖ recipes::step()   masks stats::step()
-• Dig deeper into tidy modeling with R at https://www.tmwr.org
+• Learn how to get started at https://www.tidymodels.org/start/
 > library(vroom)
 
 Attaching package: ‘vroom’
@@ -199,11 +199,11 @@ dbl (10): id, RESOURCE, MGR_ID, ROLE_ROLLUP_1, ROLE_ROLLUP_2, ROLE_DEPTNAME,...
 +   tune_grid(resamples=folds,
 +             grid=tuning_grid,
 +             metrics=metric_set(roc_auc)) #Or leave metrics NULL
-→ A | warning: Model failed to converge with max|grad| = 0.160245 (tol = 0.002, component 1), Model is nearly unidentifiable: very large eigenvalue
-                - Rescale variables?, Model failed to converge with max|grad| = 0.136946 (tol = 0.002, component 1)
+→ A | warning: Model failed to converge with max|grad| = 0.163099 (tol = 0.002, component 1), Model is nearly unidentifiable: very large eigenvalue
+                - Rescale variables?
 There were issues with some computations   A: x1
-→ B | warning: Model failed to converge with max|grad| = 0.160931 (tol = 0.002, component 1), Model is nearly unidentifiable: very large eigenvalue
-                - Rescale variables?, Model failed to converge with max|grad| = 0.149274 (tol = 0.002, component 1)
+→ B | warning: Model failed to converge with max|grad| = 0.157181 (tol = 0.002, component 1), Model is nearly unidentifiable: very large eigenvalue
+                - Rescale variables?, Model failed to converge with max|grad| = 0.143992 (tol = 0.002, component 1)
 There were issues with some computations   A: x1There were issues with some computations   A: x1   B: x1
 There were issues with some computations   A: x1   B: x1
 
@@ -322,6 +322,22 @@ There were issues with some computations   A: x1   B: x1
 > ########################################################################
 > #Support Vector Machines
 > ########################################################################
+> library(kernlab)
+
+Attaching package: ‘kernlab’
+
+The following object is masked from ‘package:scales’:
+
+    alpha
+
+The following object is masked from ‘package:purrr’:
+
+    cross
+
+The following object is masked from ‘package:ggplot2’:
+
+    alpha
+
 > svmRadial <- svm_rbf(rbf_sigma = tune(), cost = tune())%>%
 +   set_mode("classification") %>%
 +   set_engine()

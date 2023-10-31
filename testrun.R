@@ -228,6 +228,7 @@ vroom_write(submission, "amazonKNN.csv", delim = ",")
 ########################################################################
 #Support Vector Machines
 ########################################################################
+library(kernlab)
 svmRadial <- svm_rbf(rbf_sigma = tune(), cost = tune())%>%
   set_mode("classification") %>%
   set_engine()
