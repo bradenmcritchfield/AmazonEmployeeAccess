@@ -2,6 +2,7 @@ library(tidyverse)
 library(tidymodels)
 library(vroom)
 library(embed)
+library(themis) 
 
 amazontrain <- vroom("./train.csv")
 amazontest <- vroom("./test.csv")
