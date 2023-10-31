@@ -18,7 +18,7 @@ my_recipe_new <- recipe(ACTION ~ ., data=amazontrain) %>%
   step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>%
   step_normalize(all_numeric_predictors()) %>%
   #step_pca(all_predictors(), threshold = .8) %>%
-  step_smote(all_outcomes(), neighbors=5)
+  step_smote(all_outcomes(), neighbors=20)
 
 my_mod_RF <- rand_forest(mtry = tune(), min_n = tune(), trees = 500) %>%
   set_engine("ranger") %>%
