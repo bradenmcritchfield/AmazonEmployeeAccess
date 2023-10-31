@@ -20,7 +20,7 @@ my_recipe_new <- recipe(ACTION ~ ., data=amazontrain) %>%
   #step_pca(all_predictors(), threshold = .8) %>%
   step_smote(all_outcomes(), neighbors=5)
 
-my_mod_RF <- rand_forest(mtry = tune(), min_n = tune(), trees = 1000) %>%
+my_mod_RF <- rand_forest(mtry = tune(), min_n = tune(), trees = 500) %>%
   set_engine("ranger") %>%
   set_mode("classification")
 
@@ -31,10 +31,10 @@ amazon_workflow_RF <- workflow() %>%
 ## Grid of values to tune over
 tuning_grid <- grid_regular(mtry(range = c(1,(ncol(amazontrain)-1))),
                             min_n(),
-                            levels = 5) ## L^2 total tuning possibilities
+                            levels = 10) ## L^2 total tuning possibilities
 
 ## Split data for CV15
-folds <- vfold_cv(amazontrain, v = 5, repeats=1)
+folds <- vfold_cv(amazontrain, v = 10, repeats=1)
 
 ## Run the CV
 CV_results <- amazon_workflow_RF %>%
