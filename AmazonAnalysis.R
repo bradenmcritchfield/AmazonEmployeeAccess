@@ -67,11 +67,17 @@ hist(submission$Action)
 #############################################################
 #Penalized Logistic Regression
 #############################################################
+my_recipe_PLR <- recipe(ACTION ~ ., data=amazontrain) %>%
+  step_mutate_at(all_numeric_predictors(), fn = factor) %>%
+  step_other(all_nominal_predictors(), threshold = .01) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION))
+  
 my_mod_PLR <- logistic_reg(mixture=tune(), penalty=tune()) %>% #Type of model
   set_engine("glmnet")
 
 amazon_workflow_PLR <- workflow() %>%
-  add_recipe(my_recipe) %>%
+  add_recipe(my_recipe_PLR) %>%
   add_model(my_mod_PLR)
 
 ## Grid of values to tune over
