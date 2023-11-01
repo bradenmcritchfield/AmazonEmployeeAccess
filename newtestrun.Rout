@@ -43,7 +43,7 @@ Type 'q()' to quit R.
 ✖ dplyr::lag()      masks stats::lag()
 ✖ yardstick::spec() masks readr::spec()
 ✖ recipes::step()   masks stats::step()
-• Dig deeper into tidy modeling with R at https://www.tmwr.org
+• Learn how to get started at https://www.tidymodels.org/start/
 > library(vroom)
 
 Attaching package: ‘vroom’
@@ -96,7 +96,7 @@ dbl (10): id, RESOURCE, MGR_ID, ROLE_ROLLUP_1, ROLE_ROLLUP_2, ROLE_DEPTNAME,...
 +   step_lencode_mixed(all_nominal_predictors(), outcome = vars(ACTION)) %>%
 +   step_normalize(all_numeric_predictors()) %>%
 +   #step_pca(all_predictors(), threshold = .8) %>%
-+   step_smote(all_outcomes(), neighbors=5)
++   step_smote(all_outcomes(), neighbors=20)
 > 
 > my_mod_RF <- rand_forest(mtry = tune(), min_n = tune(), trees = 500) %>%
 +   set_engine("ranger") %>%
@@ -119,39 +119,39 @@ dbl (10): id, RESOURCE, MGR_ID, ROLE_ROLLUP_1, ROLE_ROLLUP_2, ROLE_DEPTNAME,...
 +   tune_grid(resamples=folds,
 +             grid=tuning_grid,
 +             metrics=metric_set(roc_auc)) #Or leave metrics NULL
-→ A | warning: 10 columns were requested but there were 9 predictors in the data. 9 will be used.
+→ A | warning: Model failed to converge with max|grad| = 0.392668 (tol = 0.002, component 1), Model is nearly unidentifiable: very large eigenvalue
+                - Rescale variables?
 There were issues with some computations   A: x1
-There were issues with some computations   A: x2
-There were issues with some computations   A: x3
-There were issues with some computations   A: x4
-There were issues with some computations   A: x5
-→ B | warning: Model failed to converge with max|grad| = 0.398809 (tol = 0.002, component 1), Model is nearly unidentifiable: very large eigenvalue
+→ B | warning: 10 columns were requested but there were 9 predictors in the data. 9 will be used.
+There were issues with some computations   A: x1There were issues with some computations   A: x1   B: x1
+There were issues with some computations   A: x1   B: x2
+There were issues with some computations   A: x1   B: x3
+There were issues with some computations   A: x1   B: x4
+There were issues with some computations   A: x1   B: x5
+There were issues with some computations   A: x1   B: x6
+There were issues with some computations   A: x1   B: x7
+There were issues with some computations   A: x1   B: x8
+There were issues with some computations   A: x1   B: x9
+There were issues with some computations   A: x1   B: x10
+There were issues with some computations   A: x1   B: x11
+There were issues with some computations   A: x1   B: x12
+There were issues with some computations   A: x1   B: x13
+There were issues with some computations   A: x1   B: x14
+There were issues with some computations   A: x1   B: x15
+There were issues with some computations   A: x1   B: x16
+There were issues with some computations   A: x1   B: x17
+There were issues with some computations   A: x1   B: x18
+There were issues with some computations   A: x1   B: x19
+There were issues with some computations   A: x1   B: x20
+→ C | warning: Model failed to converge with max|grad| = 0.391753 (tol = 0.002, component 1), Model is nearly unidentifiable: very large eigenvalue
                 - Rescale variables?
-There were issues with some computations   A: x5There were issues with some computations   A: x5   B: x1
-There were issues with some computations   A: x6   B: x1
-There were issues with some computations   A: x7   B: x1
-There were issues with some computations   A: x8   B: x1
-There were issues with some computations   A: x9   B: x1
-There were issues with some computations   A: x10   B: x1
-There were issues with some computations   A: x11   B: x1
-There were issues with some computations   A: x12   B: x1
-There were issues with some computations   A: x13   B: x1
-There were issues with some computations   A: x14   B: x1
-There were issues with some computations   A: x15   B: x1
-→ C | warning: Model failed to converge with max|grad| = 0.322774 (tol = 0.002, component 1), Model is nearly unidentifiable: very large eigenvalue
-                - Rescale variables?
-There were issues with some computations   A: x15   B: x1There were issues with some computations   A: x15   B: x1   C: x1
-There were issues with some computations   A: x16   B: x1   C: x1
-There were issues with some computations   A: x17   B: x1   C: x1
-There were issues with some computations   A: x18   B: x1   C: x1
-There were issues with some computations   A: x19   B: x1   C: x1
-There were issues with some computations   A: x20   B: x1   C: x1
-There were issues with some computations   A: x21   B: x1   C: x1
-There were issues with some computations   A: x22   B: x1   C: x1
-There were issues with some computations   A: x23   B: x1   C: x1
-There were issues with some computations   A: x24   B: x1   C: x1
-There were issues with some computations   A: x25   B: x1   C: x1
-There were issues with some computations   A: x25   B: x1   C: x1
+There were issues with some computations   A: x1   B: x20There were issues with some computations   A: x1   B: x20   C: x1
+There were issues with some computations   A: x1   B: x21   C: x1
+There were issues with some computations   A: x1   B: x22   C: x1
+There were issues with some computations   A: x1   B: x23   C: x1
+There were issues with some computations   A: x1   B: x24   C: x1
+There were issues with some computations   A: x1   B: x25   C: x1
+There were issues with some computations   A: x1   B: x25   C: x1
 
 > 
 > #Find the best tuning parameters
@@ -172,5 +172,5 @@ There were issues with some computations   A: x25   B: x1   C: x1
 > vroom_write(submission, "amazonrf.csv", delim = ",")
 > 
 > proc.time()
-    user   system  elapsed 
-5956.982   47.905 5694.242 
+     user    system   elapsed 
+ 8007.621    66.272 10664.994 
